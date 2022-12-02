@@ -34,8 +34,7 @@ public class Game
     private int numBacks;
 
     // Items
-    private ArrayList<String> consumableItems = new ArrayList<String>();
-    consumableItems cannedMeat, bottledWater;
+    consumableItems cannedMeat, bottledWater, cannedSoup, juiceBox;
 
     /**
      * Create the game and initialise its internal map. Also initializes the ArrayList used for the back command
@@ -55,6 +54,7 @@ public class Game
 
     /**
      * Create all the rooms and link their exits together.
+     * Sets the starting room to forest
      */
     private void createRooms()
     {
@@ -206,15 +206,24 @@ public class Game
         currentRoom = forest; // Starts the game in forest
     }
 
-    // Creates the consumable items
+    /**
+     * Creates the items
+     * pre - must have the items decalred in the instance variables
+     * post - all items initialized to their specified parameters
+     * location, itemName, itemDesc
+     * Object created in the consumableItems class
+     */
     private void createItems()
     {
         cannedMeat = new consumableItems("shorelineHousing", "bottledWater", "A simple bottle of water");
         bottledWater = new consumableItems("shorelineHousing", "Bottled Water", "A simple bottled water");
+        cannedSoup = new consumableItems("groceryStore", "Canned Soup", "A can of soup");
+        juiceBox = new consumableItems("groceryStore", "Juice Box", "AA juice box");
     }
 
     /**
      *  Main play routine.  Loops until end of play.
+     * Called by the main method
      */
     public void play() 
     {            
@@ -224,6 +233,7 @@ public class Game
         // execute them until the game is over.
                 
         boolean finished = false;
+        int temp = 0;
         while (! finished) {
             Command command = parser.getCommand();
             finished = processCommand(command);
@@ -234,11 +244,19 @@ public class Game
                 finished = true;
             }else if (water <= 0) {
                 finished = true;
+            }else if( currentRoom.getShortDescription().equals("in the safe zone")) {
+                finished = true;
+                 temp++;
             }
-        }
-        System.out.println("Me pesonally, I wouldn't let a game beat me like that...");
+            }
+            if (temp == 1)
+            {
+            System.out.println("U won!!!");
+            }else if (temp == 0){
+                System.out.println("Me pesonally, I wouldn't let a game beat me like that...");
+            }
     }
-
+        
     /**
      * Print out the opening message for the player.
      */
@@ -284,29 +302,53 @@ public class Game
                 System.out.println("");
             }else
             System.out.println("You tripped clumsy person");
-            health -= tripInt;
+            health -= tripInt; //Health decrements by tripInt, default 5
         }
         else if (commandWord.equals("quit")) {
             wantToQuit = quit(command);
         }else if (commandWord.equals("back")) {
+            //Back command
             goBack(command);
         }else if (commandWord.equals("map")) {
+            //Prints the map
             printMap();
         }else if (commandWord.equals("clear")) {
+            //clears the terminal for aethtetics
             clearTerminal();
         }else if (commandWord.equals("cheat")){
+            //Gives the player psuedo-inifinite resources to survive
             food = 999999999;
             water = 999999999;
             health = 999999999;
         }else if(commandWord.equals("use"))
         {
             useItem(command.getSecondWord());
+            //Ensures player cannot go above 100 of any resource
+            if(water > 100)
+            {
+                water = 100;
+            }else if(food > 100)
+            {
+                food = 100;
+            }
+            //Shows stats to player
+            showStats();
         }else if (commandWord.equals("search"))
         {
-            search();
+            //Searches the currentRoom for items and puts them in inventory
+            if (canSearch == true){
+                search();
+            }else{
+                System.out.println("You can't search twice");
+            }
         }else if (commandWord.equals("inventory"))
         {
+            //Prints the inventory
             printInventory();
+        }else if (commandWord.equals("tutorial"))
+        {
+            //Prints the tutorial
+            printTut();
         }
         // else command not recognised.
         return wantToQuit;
@@ -353,6 +395,7 @@ public class Game
         else {
             currentRoom = nextRoom;
             System.out.println(currentRoom.getLongDescription());
+            canSearch = true;
         }
         initializeArrayList();
     }
@@ -367,6 +410,8 @@ public class Game
 
     /**
      * The back command which uses an arraylist 
+     * to go back mulitple turns
+     * If used tooheavily might break
      */
     private void goBack(Command command)
     {
@@ -499,6 +544,12 @@ public class Game
         System.out.println('\u000C');
     }
 
+    /**
+     * Uses the item
+     * Ensures player has the item and adds its resources to the player's 
+     * resource pool
+     * @param item
+     */
     private void useItem(String item)
         {
             if (item == null)
@@ -517,12 +568,6 @@ public class Game
             }else if (cannedMeat.getDoesHaveItem() == false)
             {
                 System.out.println("You dont have any canned meat");
-            }else if(water > 100)
-            {
-                water = 100;
-            }else if(food > 100)
-            {
-                food = 100;
             }
 
             //Uses bottledWater
@@ -536,15 +581,36 @@ public class Game
             {
                 System.out.println("You dont have any bottled water");
                 return;
-            }else if(water > 100)
+            }
+
+            //Uses cannedSoup
+            if (item.equals("cannedSoup") && cannedSoup.getDoesHaveItem() == true)
             {
-                water = 100;
-            }else if(food > 100)
+                food += 10;
+                water += 10;
+                showStats();
+                cannedSoup.setDoesNotHaveItem();
+            }else if (cannedSoup.getDoesHaveItem() == false)
             {
-                food = 100;
+                System.out.println("You dont have any bottled water");
+                return;
+            }
+
+            //Uses juiceBox
+            if (item.equals("juiceBox") && juiceBox.getDoesHaveItem() == true)
+            {
+                food += 10;
+                water += 10;
+                showStats();
+                juiceBox.setDoesNotHaveItem();
+            }else if (juiceBox.getDoesHaveItem() == false)
+            {
+                System.out.println("You don't have a juice box");
+                return;
             }
         }
 
+        //Shows the player stats
         private void showStats()
         {
             System.out.println("Health: " + health);
@@ -552,33 +618,73 @@ public class Game
             System.out.println("Water: " + water);
         }
 
+        /**
+         * Instance variables for the search command so I don't have to go all the
+         * way to the top of game class
+         * search searches for items and adds them to the players inventory 
+         * ensuring that the currentRoom has that item in it
+         */
         private boolean foundWater = false;
+        private boolean foundMeat = false;
+        private boolean foundSoup = false;
+        private boolean foundJuiceBox = false;
+        private boolean canSearch = true;
         private void search()
         {
+            //Local arraylist and currentRoom identitfier
             String roomDescription = currentRoom.getShortDescription();
-            String waterRooms[] = {"near a few riverside houses.", "in a Taco Bell."};
+            String waterRooms[] = {"near a few riverside houses.", "in the suberbs outside the city."};
+            String meatRooms[] = {"in a Taco Bell."};
+            String soupRoooms[] = {"in a grocery store"};
+            String juiceRooms[] = {"in a grocery store"};
 
+            //Checks if room can give itemm then does if possible
             if (roomDescription == waterRooms[0] || roomDescription == waterRooms[1] && foundWater != true)
             {
                 bottledWater.setHasItem();
                 System.out.println("You found a bottle of water!");
                 foundWater = true;
-            }else 
+            }else if(roomDescription == meatRooms[0] && foundMeat != true)
             {
+                cannedMeat.setHasItem();
+                System.out.println("You found canned meat!");
+            }else if (roomDescription == soupRoooms[0] && foundSoup != true){
+                cannedSoup.setHasItem();
+                System.out.println("You found canned soup!");
+            }else if(roomDescription == juiceRooms[0] && foundJuiceBox != true){
+                juiceBox.setHasItem();
+                System.out.println("You found juice box!");
+            }else{
                 System.out.println("There is nothing here");
             }
+            canSearch = false;
         }
 
+        //Prints all items in the players inventory
         private void printInventory()
         {
             if (cannedMeat.getDoesHaveItem() == true)
             {
                 System.out.println("cannedMeat");
-            }else if (bottledWater.getDoesHaveItem() == true)
+            }
+            if (bottledWater.getDoesHaveItem() == true)
             {
                 System.out.println("bottledWater");
+            }
+            if (cannedSoup.getDoesHaveItem() == true)
+            {
+                System.out.println("juiceBox");
             }else {
                 System.out.println("You have nothing lol");
             }
+        }
+
+        //Prints the tutorial
+        public void printTut()
+        {
+            System.out.println("To use the go command locate where the exits are defined,");
+            System.out.println("the type go east for example.");
+            System.out.println("To use the use command type use cannedMeat or other item for example.");
+            System.out.println("The items given in the inventory commmand are the exact spelling and capitialization needed for use command to work");
         }
 }
